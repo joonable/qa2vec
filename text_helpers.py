@@ -53,8 +53,8 @@ def normalise_kor_text(texts, stops):
     return (texts)
 
 
-def filter_answer(answer):
-    if re.findall(pattern='상담(\s)*접수(\s)*후(\s)*재문의', string=answer):
+def filter_rows(question, answer):
+    if re.findall(pattern='상담(\s)*접수(\s)*후(\s)*재(\s)*문의', string=answer):
         return 'DROP'
     if re.findall(pattern='신속한(\s)*답변', string=answer):
         return 'DROP'
@@ -70,7 +70,10 @@ def filter_answer(answer):
         return False
     if re.findall(pattern='(오늘)(.)*(확인)(.)*(어려워)', string=answer):
         return False
+    if question == None:
+        return False
     return True
+
 
 def clean_answer(answer):
     answer = re.sub(pattern= r'((\@[0-9]+\@)|(오늘도)|(\\x1e)|(&#41;)|(죄송(\s)*합니다)|(안녕(\s)*하세요)'
@@ -119,6 +122,42 @@ def load_dataset_QA():
     target = [i for i in range(len(question_texts))]
     return question_texts, answer_texts, target
 
+def load_dataset_origin():
+    def extract_state_from_question(pattern, question):
+        assert pattern in ['주문상태', '문의유형']
+        try:
+            found = re.search(pattern=pattern + ' : <(.*?)>', string=question).group(1)
+            if found == "":
+                return None
+            else:
+                return found
+        except AttributeError:
+            return None
+
+    def cleansing_question(question):
+        try:
+            found = re.search(pattern='@내용 : (.+?)$', string=question).group(1)
+            if found == "":
+                return None
+            else:
+                return found
+        except AttributeError:
+            return None
+
+    df = pd.read_csv('/home/admin-/PycharmProjects/sr_data/180622_minimal.dat', sep='\t')
+    df.columns = ['req_date', 'cate1', 'cate2', 'cate3', 'prd_cd', 'prd_nm', 'answer_date', 'answer_time', 'question',
+                  'answer']
+    df.drop(['req_date', 'answer_date', 'answer_time'], inplace=True, axis=1)
+    for col in ['cate1', 'cate2', 'cate3', 'answer_date', 'answer_time', 'question', 'answer']:
+        df[col] = df[col].apply(lambda x: x[1:-1])
+
+    df['order_state'] = df.question.apply(lambda x: extract_state_from_question('주문상태', x))
+    df['cate0'] = df.question.apply(lambda x: extract_state_from_question('문의유형', x))
+    df['question'] = df.question.apply(lambda x: cleansing_question(x))
+
+    df.drop(['req_date', 'answer_date', 'answer_time'], inplace=True, axis=1)
+
+    return df
 
 # Build dictionary of words
 def build_dictionary(sentences, vocabulary_size):
