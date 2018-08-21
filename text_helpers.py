@@ -11,6 +11,34 @@ import numpy as np
 import requests
 import pandas as pd
 import re
+import json
+
+
+def get_config():
+    with open('./config.json') as json_file:
+        conf = json.load(json_file)
+
+    # Declare model parameters
+    batch_size = conf['batch_size']
+    vocab_size = conf['vocab_size']
+    iterations = conf['iterations']
+    lr = conf['lr']
+
+    # embedding_size = 200   # Word embedding size
+    word_emb_size = conf['word_emb_size']
+    doc_emb_size = conf['doc_emb_size']  # Document embedding size
+    concatenated_size = word_emb_size + doc_emb_size
+
+    num_sampled = int(batch_size / 2)  # Number of negative examples to sample.
+    window_size = conf['window_size']  # How many words to consider to the left.
+
+    # Add checkpoints to training
+    save_embeddings_every = conf['save_embeddings_every']
+    print_valid_every = conf['print_valid_every']
+    print_loss_every = conf['print_loss_every']
+
+    return batch_size, vocab_size, iterations, lr, word_emb_size, doc_emb_size, concatenated_size, num_sampled, \
+           window_size, save_embeddings_every, print_valid_every, print_loss_every
 
 
 # Normalize text
@@ -108,7 +136,7 @@ def filter_pos(answer):
     return [tup[0] for tup in answer if tup[1] not in pos_list]
 
 def load_dataset():
-    df = pd.read_pickle('/home/will/workspace/sr_data/preprocessed_sr_data_180816.pkl')  # TODO file_path
+    df = pd.read_pickle('/home/will/workspace/sr_data/preprocessed_sr_data_180816.pkl')
     texts = df.question_pos_text.apply(lambda x: " ".join(x)).drop_duplicates().tolist()
     target = [i for i in range(len(texts))]
     # print(texts[0])
@@ -116,10 +144,11 @@ def load_dataset():
 
 
 def load_dataset_QA():
-    df = pd.read_pickle('/home/will/workspace/sr_data/preprocessed_sr_data_180816.pkl')  # TODO file_path
+    df = pd.read_pickle('/home/will/workspace/sr_data/preprocessed_sr_data_180821.pkl')
     question_texts = df.question_pos_text.apply(lambda x: " ".join(x)).tolist()
     answer_texts = df.answer_pos_text.apply(lambda x: " ".join(x)).tolist()
     target = [i for i in range(len(question_texts))]
+    print(len(question_texts), len(answer_texts), len(target))
     return question_texts, answer_texts, target
 
 def load_dataset_origin():
@@ -147,7 +176,7 @@ def load_dataset_origin():
     df = pd.read_csv('/home/admin-/PycharmProjects/sr_data/180622_minimal.dat', sep='\t')
     df.columns = ['req_date', 'cate1', 'cate2', 'cate3', 'prd_cd', 'prd_nm', 'answer_date', 'answer_time', 'question',
                   'answer']
-    df.drop(['req_date', 'answer_date', 'answer_time'], inplace=True, axis=1)
+
     for col in ['cate1', 'cate2', 'cate3', 'answer_date', 'answer_time', 'question', 'answer']:
         df[col] = df[col].apply(lambda x: x[1:-1])
 

@@ -35,37 +35,23 @@ data_folder_name = 'temp'
 if not os.path.exists(data_folder_name):
     os.makedirs(data_folder_name)
 
-with open('./config.json') as json_file:
-    conf = json.load(json_file)
+
 
 # Start a graph session
 sess = tf.Session()
 
 # Declare model parameters
-batch_size = conf.batch_size
-vocab_size = conf.vocab_size
-iterations = conf.iterations
-lr = conf.lr
 
-# embedding_size = 200   # Word embedding size
-word_emb_size = conf.word_emb_size
-doc_emb_size = conf.doc_emb_size   # Document embedding size
-concatenated_size = word_emb_size + doc_emb_size
+batch_size, vocab_size, iterations, lr, word_emb_size, doc_emb_size, concatenated_size, num_sampled, window_size, \
+save_embeddings_every, print_valid_every, print_loss_every = text_helpers.get_config()
 
-num_sampled = int(batch_size/2)    # Number of negative examples to sample.
-window_size = conf.window_size       # How many words to consider to the left.
-
-# Add checkpoints to training
-save_embeddings_every = conf.save_embeddings_every
-print_valid_every = conf.print_valid_every
-print_loss_every = conf.print_loss_every
 
 # Declare stop words
 #stops = stopwords.words('english')
 stops = []
 
 # We pick a few test words for validation.
-valid_words = ['love', 'hate', 'happy', 'sad', 'man', 'woman']
+valid_words = ['고객', '배송', '주문', '결제', '환불', '방송']
 # Later we will have to transform these into indices
 
 # Load the movie review data
@@ -76,20 +62,27 @@ print('Loading Data')
 question_texts, answer_texts, target = text_helpers.load_dataset_QA()
 
 # Normalize text
-print('Normalizing Text Data')
+# print('Normalizing Text Data')
 # texts = text_helpers.normalize_text(texts, stops)
-question_texts = text_helpers.normalise_kor_text(question_texts, stops)       #TODO : normalise_kor_text()
-answer_texts = text_helpers.normalise_kor_text(answer_texts, stops)           #TODO : normalise_kor_text()
+# question_texts = text_helpers.normalise_kor_text(question_texts, stops)
+# answer_texts = text_helpers.normalise_kor_text(answer_texts, stops)
 
-# Texts must coentain at least window_size
+# Texts must contain at least window_size
 target = [target[idx] for idx, (question, answer) in enumerate(zip(question_texts, answer_texts))
           if len(question.split()) > window_size and len(answer.split()) > window_size]
-question_texts = [question for idx, (question, answer) in enumerate(zip(question_texts, answer_texts))
+texts = [(question, answer) for idx, (question, answer) in enumerate(zip(question_texts, answer_texts))
           if len(question.split()) > window_size and len(answer.split()) > window_size]
-answer_texts = [answer for idx, (question, answer) in enumerate(zip(question_texts, answer_texts))
-          if len(question.split()) > window_size and len(answer.split()) > window_size]
+question_texts = [tup[0] for tup in texts]
+answer_texts = [tup[1] for tup in texts]
 
-assert(len(target)==len(question_texts)==len(answer_texts))
+# answer_texts = [answer for idx, (question, answer) in enumerate(zip(question_texts, answer_texts))
+#           if len(question.split()) > window_size and len(answer.split()) > window_size]
+
+# question_texts = [x for x in question_texts if len(x.split()) > window_size]
+# answer_texts = [x for x in answer_texts if len(x.split()) > window_size]
+
+print(len(target) ,len(question_texts), len(answer_texts))
+assert(len(target) == len(question_texts) == len(answer_texts))
 
 # Build our data set and dictionaries
 print('Creating Dictionary')
@@ -118,8 +111,8 @@ is_question = tf.Variable(True, trainable=False)
 # assert(len(target)==len(texts))
 
 # NCE loss parameters
-nce_weights = tf.Variable(tf.truncated_normal([vocab_size, concatenated_size],
-                                              stddev=1.0 / np.sqrt(concatenated_size)))
+nce_weights = tf.Variable(tf.truncated_normal(
+    [vocab_size, concatenated_size],stddev=1.0 / np.sqrt(concatenated_size)))
 nce_biases = tf.Variable(tf.zeros([vocab_size]))
 
 # Create data/target placeholders

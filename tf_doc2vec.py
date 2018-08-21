@@ -100,10 +100,6 @@ text_data = text_helpers.text_to_numbers(texts, word_dictionary)
 valid_examples = [word_dictionary[x] for x in valid_words]    
 
 print('Creating Model')
-print(len(texts))
-print(len(texts))
-print(len(texts))
-print(len(texts))
 
 # Define Embeddings:
 word_embeddings = tf.Variable(tf.random_uniform([vocab_size, word_emb_size], -1.0, 1.0))
